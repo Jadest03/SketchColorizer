@@ -3,6 +3,20 @@ import torch.nn as nn
 import torch.nn.functional as F
 import math
 
+class SelfAttention(nn.Module):
+    def __init__(self, channels, num_heads=4):
+        super().__init__()
+        self.mha = nn.MultiheadAttention(embed_dim=channels, num_heads=num_heads, batch_first=True)
+        self.norm = nn.GroupNorm(8, channels)
+
+    def forward(self, x):
+        B, C, H, W = x.shape
+        x_norm = self.norm(x)
+        x_flat = x_norm.view(B, C, H * W).transpose(1, 2)
+        attn_out, _ = self.mha(x_flat, x_flat, x_flat)
+        attn_out = attn_out.transpose(1, 2).view(B, C, H, W)
+        return x + attn_out
+
 class DoubleConv(nn.Module):
     def __init__(self, in_channels, out_channels, mid_channels=None):
         super().__init__()
@@ -83,6 +97,7 @@ class UNet(nn.Module):
 
         self.bot1 = DoubleConv(256, 512)
         self.bot2 = DoubleConv(512, 512) # maintain channels
+        self.attention_block = SelfAttention(512) # attention block 
         self.bot3 = DoubleConv(512, 256)
 
         self.up1 = unetDecoder(512, 128) # 512
@@ -120,6 +135,8 @@ class UNet(nn.Module):
 
         x4 = self.bot1(x4)
         x4 = self.bot2(x4)
+        
+        x4 = self.attention_block(x4)
         
         x4 = self.bot3(x4) + self.emb_bot(t_emb)[:, :, None, None]
 
