@@ -1,0 +1,12 @@
+# torch
+torch==2.10.0
+torchvision==0.25.0
+
+# data
+datasets==4.6.1
+pillow==12.1.1
+numpy==2.4.2
+
+# utility(visualization)
+tqdm==4.67.3
+matplotlib==3.10.8
